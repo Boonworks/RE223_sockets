@@ -9,10 +9,7 @@
 #include <netdb.h>
 
 #define MAXREQ 10
-#define BUFFER_SIZE 20
-
-
-
+#define BUFFER_SIZE 100
 
 double calculatrice(char* requete){
 
@@ -21,7 +18,6 @@ double calculatrice(char* requete){
     char op;
 
     sscanf(requete, "%lf %c %lf", &nb1, &op, &nb2);
-
 
     if ((nb1 > 10000.) || (nb1 < 0.)){
         return -1;
@@ -44,31 +40,22 @@ double calculatrice(char* requete){
     else{
         return -2;
     }
-
-
 }
 
-
-
-
-int main(int argc, char** argv){
+int main(int argc, char** argv)
+{
 
     struct sockaddr_in addr_serveur;    /* Structure Internet sockaddr_in */
-    struct hostent *hptr;       /* Infos sur le serveur */
-    int port;                   /* Numero de port du serveur */
+    struct hostent *hptr;               /* Infos sur le serveur */
+    int port;                           /* Numero de port du serveur */
 
     int socket_client;                  /* Id de la socket entrante */
     struct sockaddr_in addr_client;     /* sockaddr_in de la connection entrante */
     int longeur_client;
-    struct hostent *newhptr;    /* Infos sur le client suivant /etc/hosts */
+    struct hostent *newhptr;            /* Infos sur le client suivant /etc/hosts */
 
     const char* MESSAGE_ERREUR = "[Serveur]: Out of range... \n";
     const char* MESSAGE_CONF = "[Serveur]: La requete doit etre du type: nb1 op nb2 \n";
-
-
-
-
-
 
     port = atoi(argv[1]);
 
@@ -81,7 +68,6 @@ int main(int argc, char** argv){
     /* Initialisation du numero du port */
     addr_serveur.sin_port = htons(port);
     addr_serveur.sin_addr.s_addr = INADDR_ANY;
-
 
     int socket_serveur = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -100,7 +86,7 @@ int main(int argc, char** argv){
     listen(socket_serveur, MAXREQ);
     printf("[Serveur]: Ecoute sur le port %d \n", port);
 
-    char nb_connexion = 0;
+    int nb_connexion = 0;
 
     while(1){
 
@@ -122,7 +108,8 @@ int main(int argc, char** argv){
 
         pid = fork();
 
-        switch (pid){
+        switch (pid)
+        {
             case -1:
                 perror("fork");
                 exit(EXIT_FAILURE);
@@ -130,43 +117,39 @@ int main(int argc, char** argv){
             case 0:
                 char buffer[BUFFER_SIZE];
 
-                printf("[Serveur]: En attente du client... \n");
-                int nb = read(socket_client, buffer, BUFFER_SIZE);
-
+            while (1)
+            {
+                ssize_t nb = read(socket_client, buffer, BUFFER_SIZE - 1);
+                if (nb <= 0) break;                 // client fermé / erreur
                 buffer[nb] = '\0';
-                printf("[Serveur]: Message reçu: %s \n", buffer);
 
+                if (strcmp(buffer, "quit") == 0) {  // fermeture propre
+                    break;
+                }
 
-                char res[BUFFER_SIZE];
                 double resultat = calculatrice(buffer);
-
-
-                if (resultat == -1){
+                if (resultat == -1) {
+                    const char* MESSAGE_ERREUR = "[Serveur]: Out of range...\n";
                     write(socket_client, MESSAGE_ERREUR, strlen(MESSAGE_ERREUR));
-                }
-                else if(resultat == -2){
+                } else if (resultat == -2) {
+                    const char* MESSAGE_CONF = "[Serveur]: La requete doit etre du type: nb1 op nb2\n";
                     write(socket_client, MESSAGE_CONF, strlen(MESSAGE_CONF));
-
+                } else {
+                    char res[BUFFER_SIZE];
+                    snprintf(res, sizeof(res), "%lf\n", resultat);
+                    write(socket_client, res, strlen(res));
                 }
-                else{
-                    sprintf(res, "%lf \n", calculatrice(buffer));
-                    write(socket_client, &res, strlen(res));
-                }
+            }
 
-
-                close(socket_client);
-
-                exit(EXIT_SUCCESS);
-
+            close(socket_client);
+            exit(EXIT_SUCCESS);
 
             default:
-                break;
+            break;
         }
 
     }
-
     close(socket_serveur);
     printf("[Serveur]: Fin du serveur \n");
     exit(0);
-
 }

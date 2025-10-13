@@ -9,86 +9,74 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <errno.h>
-#define BUFSIZE 256
-
-int main(int argc, char **argv){
-	int sock;
-	int port;
-	struct sockaddr_in serv_address;
-	struct hostent *hostp;
-	struct servent *serveurp;
-	char *myname;
-	char buf[BUFSIZE];
-	char *host,*user;
-
-	/* Recuperation nom du serveur */
-	hostp = gethostbyname(argv[1]);
-	/* Recuperation des infos sur le serveur dans /etc/hosts pour par DNS */
-	if(hostp == NULL) {
-		printf("Probleme de recuperation d'infos sur le serveur\n");
-		exit(1);
-	}
-
-	/* Copie de l'adresse du serveur et du type d'adresse dans sa */
-	bcopy ((char *)hostp->h_addr, (char *)&serv_address.sin_addr, hostp->h_length);
-	serv_address.sin_family = AF_INET;
-
-	/* Recuperation numero de port */
-	port = atoi(argv[2]);
 
 
+int main(int argc,char** argv){
 
-	/*Creation du Socket et attribution des valeurs au struct*/
-	sock=socket(AF_INET, SOCK_STREAM, 0);
-	/* Recuperation  des infos sur le serveur et creation du socket*/
-	if(sock<0){
-		printf("Probleme lors de l'ouverture du socket!\n");
-		exit(1);
-	}
+    int sd;
+    struct sockaddr_in sa;		    /* Structure Internet sockaddr_in */
+    struct hostent *hptr ; 		    /* Infos sur le serveur */
+    char* serveur ;        		    /* Nom du serveur distant */
+    int port;
+    char buffer[256]= {0};          /* Buffer */
+    char calcul[256];
 
-
-
-	/*Recuperation des informations du serveur*/
-	serv_address.sin_family=AF_INET;
-	serv_address.sin_port=htons(port);
-	read(0, buf, BUFSIZE);
-	/*Tentative de connexion au serveur*/
-	if (connect(sock,(struct sockaddr*) &serv_address, sizeof(serv_address)) < 0 ) {
-		perror("Problème de connexion avec le serveur");
-		exit(1);
-	}
-
-	printf("Connecté au serveur %s:%d\n", argv[1], port);
-
-
-	/*Boucle de communication*/
-	while (1) {
-    printf(">> ");
-	/*Lecture de l'entrée écrite par le client*/
-    if (!fgets(buf, BUFSIZE, stdin))break;
-	printf("Vous avez entré : %s", buf);
-
-    buf[strcspn(buf, "\n")] = 0; // Enlève le \n
-
-    if (strcmp(buf, "quit") == 0) break; // Si "quit" → fin
-
-    // Envoi
-    if (write(sock, buf, strlen(buf)) <= 0) {
-        perror("Erreur lors de l'envoi");
+    /* verification du nombre d'arguments de la ligne de commande */
+    if (argc != 3) {
+        printf("Erreur d'arguments\n");
+        printf("Syntaxe : ./client Adresse port Calcul\n");
         exit(1);
     }
 
-    // Réception
-    int lecture = read(sock, buf, BUFSIZE-1);
-    if (lecture <= 0) {
-        printf("Serveur déconnecté.\n");
-        break;
+    /* Recuperation nom du serveur */
+    serveur = argv[1];
+    port = atoi(argv[2]);
+
+    /* Recuperation des infos sur le serveur dans /etc/hosts ou par DNS */
+    if((hptr = gethostbyname(serveur)) == NULL) {
+        printf("Probleme de recuperation d'infos sur le serveur\n");
+        exit(1);
     }
-    buf[lecture] = '\0';
 
-    printf("= %s\n", buf);
+    /* Initialisation la structure sockaddr sa avec les infos formattees : */
+    bcopy((char *)hptr->h_addr, (char*)&sa.sin_addr, hptr->h_length);
+
+    /* Famille d'adresse : AF_INET = PF_INET */
+    sa.sin_family = AF_INET;
+
+    /* Initialisation du numero du port */
+    sa.sin_port = htons(port);
+
+    while(1){
+        /* Etablissement de la connexion avec le serveur ftp */
+        printf("\n");
+        printf("Calcul : ");
+        fgets(calcul,256,stdin);
+        if(calcul[0]=='quit'){
+            exit(0);
+        }
+
+        /* Creation de la socket TCP */
+        if((sd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+            printf("Probleme lors de la creation de socket\n");
+            exit(1);
+        }
+
+        /* Etablissement de la connexion avec le serveur ftp */
+        if((connect(sd, (struct sockaddr *)&sa, sizeof(sa))) < 0 ) {
+            printf("Probleme de connexion avec le serveur\n");
+            exit(1);
+        }
+
+        /* Envoi de la commande ftp vers serveur ftp */
+        write(sd, calcul, strlen(calcul));
+
+        /* Lecture de la reponse du serveur ftp */
+        int n = read(sd, buffer, sizeof(char)*256);
+
+        write(1,buffer,n);
+        close(sd);
+    }
+
 }
 
-close(sock);
-
-}
