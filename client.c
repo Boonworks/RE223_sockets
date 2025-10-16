@@ -10,6 +10,10 @@
 #include <netdb.h>
 #include <errno.h>
 
+// Programme client TCP :
+// se connecte à un serveur TCP
+// envoie une requête du type "nb1 op nb2"
+// reçoit et affiche le résultat
 
 int main(int argc,char** argv){
 
@@ -22,6 +26,7 @@ int main(int argc,char** argv){
     char calcul[256];
 
     /* verification du nombre d'arguments de la ligne de commande */
+    // Syntaxe attendue : ./client <adresse> <port>
     if (argc != 3) {
         printf("Erreur d'arguments\n");
         printf("Syntaxe : ./client Adresse port Calcul\n");
