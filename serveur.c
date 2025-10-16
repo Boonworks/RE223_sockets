@@ -171,7 +171,7 @@ int main(int argc, char** argv) {
     }
 
 
-    // Fin du programm
+    // Fin du programme
 
     close(socket_serveur);
     printf("[Serveur]: Fin du serveur \n");
