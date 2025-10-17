@@ -90,7 +90,7 @@ int main(int argc, char** argv) {
     }
 
 
-    // Mise en écoute du serveur 
+    // Mise en écoute du serveur
 
     listen(socket_serveur, MAXREQ);
     printf("[Serveur]: Ecoute sur le port %d \n", port);
@@ -146,11 +146,11 @@ int main(int argc, char** argv) {
                     if (resultat == -1) {
                         const char* MESSAGE_ERREUR = "[Serveur]: Out of range...\n";
                         write(socket_client, MESSAGE_ERREUR, strlen(MESSAGE_ERREUR));
-                    } 
+                    }
                     else if (resultat == -2) {
                         const char* MESSAGE_CONF = "[Serveur]: La requete doit etre du type: nb1 op nb2\n";
                         write(socket_client, MESSAGE_CONF, strlen(MESSAGE_CONF));
-                    } 
+                    }
                     else {
                         // Envoi du résultat au client
                         char res[BUFFER_SIZE];
